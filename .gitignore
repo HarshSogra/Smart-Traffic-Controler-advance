@@ -1,0 +1,15 @@
+#python
+__pycache__/
+*.pyc
+
+#virtual env
+.venv/
+
+#Environmental Variables
+.env
+
+#Database
+*.db
+#IDE
+.idea/
+.vscode/
