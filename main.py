@@ -11,7 +11,7 @@ from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from config import SECRET_KEY
 import os
 from fastapi.middleware.cors import CORSMiddleware
-
+from fastapi import Request
 
 
 
@@ -42,6 +42,9 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+@app.options("/{rest_of_path:path}")
+async def preflight_handler(request: Request):
+    return {}
 
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 30
