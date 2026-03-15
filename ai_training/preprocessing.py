@@ -1,33 +1,32 @@
-
-import pandas as pd
-from sklearn.preprocessing import LabelEncoder
-import joblib
 import os
 
-DATA_PATH = "../dataset/raw/traffic_data.csv"
-PROCESSED_PATH = "../dataset/processed/processed_data.csv"
-ENCODER_PATH = "../backend/models/encoder.pkl"
+import joblib
+import pandas as pd
+from sklearn.preprocessing import LabelEncoder
+
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+PROJECT_ROOT = os.path.abspath(os.path.join(BASE_DIR, ".."))
+DATA_PATH = os.path.join(PROJECT_ROOT, "dataset", "raw", "traffic_data.csv")
+PROCESSED_PATH = os.path.join(PROJECT_ROOT, "dataset", "processed", "processed_data.csv")
+ENCODER_PATH = os.path.join(PROJECT_ROOT, "backend", "models", "encoder.pkl")
 
 
 def load_data():
-    df = pd.read_csv(DATA_PATH)
-    return df
+    return pd.read_csv(DATA_PATH)
 
 
-def handle_timestamp(df):
+def handle_timestamp(df: pd.DataFrame) -> pd.DataFrame:
     df["timestamp"] = pd.to_datetime(df["timestamp"])
 
     df["hour"] = df["timestamp"].dt.hour
     df["day_of_week"] = df["timestamp"].dt.dayofweek
-    df["is_weekend"] = df["day_of_week"].apply(lambda x: 1 if x >= 5 else 0)
+    df["is_weekend"] = (df["day_of_week"] >= 5).astype(int)
 
-    df.drop(columns=["timestamp"], inplace=True)
-    return df
+    return df.drop(columns=["timestamp"])
 
 
-def encode_categorical(df):
+def encode_categorical(df: pd.DataFrame):
     encoders = {}
-
     categorical_cols = ["intersection_id", "weather", "congestion_level"]
 
     for col in categorical_cols:
@@ -39,12 +38,12 @@ def encode_categorical(df):
 
 
 def save_encoders(encoders):
-    os.makedirs("../backend/models", exist_ok=True)
+    os.makedirs(os.path.dirname(ENCODER_PATH), exist_ok=True)
     joblib.dump(encoders, ENCODER_PATH)
 
 
-def save_processed(df):
-    os.makedirs("../dataset/processed", exist_ok=True)
+def save_processed(df: pd.DataFrame):
+    os.makedirs(os.path.dirname(PROCESSED_PATH), exist_ok=True)
     df.to_csv(PROCESSED_PATH, index=False)
 
 

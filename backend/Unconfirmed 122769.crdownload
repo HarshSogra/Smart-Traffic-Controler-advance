@@ -1,0 +1,208 @@
+
+const express = require('express');
+const axios = require('axios');
+const mongodb=require('mongodb')
+const mongoose=require('mongoose')
+// Add your MongoDB and API logic here
+
+mongoose.connect('mongodb+srv://divyanshuraj43435_db_user:9FvDgGOUROCOGdoh@smartindia.6uydl5q.mongodb.net/?retryWrites=true&w=majority&appName=smartindia').then(()=>{console.log('connected to db')})
+
+const path = require('path');
+const app = express();
+app.set('view engine','ejs')
+app.use(express.json());
+// Serve static files (dashboard.js, etc.)
+app.use(express.static(path.join(__dirname)));
+
+app.get("/", (req, res) => {
+    res.render(__dirname + "/index.ejs");
+});
+
+
+const TrafficData = require('./trafficData.model');
+
+// Save traffic data to MongoDB
+app.post('/api/save-training-data', async (req, res) => {
+    try {
+        const docs = await TrafficData.insertMany(req.body.data);
+        console.log('Saved traffic data:', docs);
+        res.json({ status: 'success', inserted: docs.length });
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ status: 'error', message: err.message });
+    }
+});
+
+// Example: Traffic data endpoint
+app.get('/api/traffic', async (req, res) => {
+    const city = req.query.place;
+    console.log('API /api/traffic called with city:', city);
+    if (!city) {
+        console.log('No city provided in query.');
+        return res.json({ vehicleLocations: [] });
+    }
+    try {
+        // Fetch last 50 records for the city
+        const data = await TrafficData.find({ city }).sort({ timestamp: -1 }).limit(50);
+        console.log(`Found ${data.length} records for city: ${city}`);
+        if (data.length > 0) {
+            console.log('Sample record:', data[0]);
+        }
+        res.json({ vehicleLocations: data });
+    } catch (err) {
+        console.error('Error in /api/traffic:', err);
+        res.json({ vehicleLocations: [] });
+    }
+});
+
+app.listen(3000, () => {
+    console.log('Server running on http://localhost:3000');
+});
+
+function renderVehicleMap(vehicleLocations) {
+
+    const map = document.getElementById("vehicleMap");
+
+    if(!map){
+        console.log("vehicleMap div not found");
+        return;
+    }
+
+    map.innerHTML="";
+
+    if(vehicleLocations.length===0){
+        map.innerHTML="No data";
+        return;
+    }
+
+    const redLightPositions={
+        "Red Light A":{x:20,y:30},
+        "Red Light B":{x:50,y:50},
+        "Red Light C":{x:70,y:20},
+        "Red Light D":{x:30,y:70},
+        "Red Light E":{x:80,y:60}
+    }
+
+    vehicleLocations.forEach(rec=>{
+
+        const pos=redLightPositions[rec.red_light] || {x:50,y:50}
+
+        const dot=document.createElement("div")
+        dot.className="car-dot"
+
+        dot.style.left=pos.x+"%"
+        dot.style.top=pos.y+"%"
+
+        if(rec.no_of_vehicles>30){
+            dot.style.background="red"
+        }
+        else if(rec.no_of_vehicles>15){
+            dot.style.background="orange"
+        }
+        else{
+            dot.style.background="green"
+        }
+
+        map.appendChild(dot)
+
+    })
+
+}
+
+
+
+app.get('/data', async (req, res) => {
+    try {
+        const data = await fetchData(); // Step 1
+        const predictions = await getPredictions(data); // Step 2
+        const finalData = addFullForm(predictions); // Step 3
+        res.json(finalData); // frontend ko bhej diya
+    } catch(err) {
+        console.error(err);
+        res.status(500).send('Error');
+    }
+});
+
+
+
+
+
+/*app.get("/traffic-prediction", async (req,res)=>{
+
+try{
+
+// last 5 traffic records
+const records = await TrafficData
+.find()
+.sort({timestamp:-1})
+.limit(5)
+
+const predictions=[]
+
+for(const rec of records){
+
+const trafficData={
+vehicle_count:rec.no_of_vehicles,
+avg_speed:rec.speed,
+temperature:rec.temperature,
+humidity:rec.humidity
+}
+
+const response=await axios.post(
+"http://localhost:8000/predict",
+trafficData
+)
+
+predictions.push({
+red_light:rec.red_light,
+prediction:response.data.prediction
+})
+
+}
+
+res.json({
+predictions:predictions
+})
+
+}
+catch(err){
+
+console.log(err)
+
+res.json({
+predictions:[]
+})
+
+}
+
+})*/
+
+
+app.get("/traffic-prediction", async (req,res)=>{
+
+try{
+
+const trafficData={
+vehicle_count:40,
+avg_speed:20,
+temperature:30,
+humidity:55
+}
+
+const response=await axios.post(
+"http://localhost:8000/predict",
+trafficData
+)
+
+res.json(response.data)
+console.log("working prediction")
+}
+catch(err){
+
+console.log(err)
+res.json({prediction:"Model not running"})
+
+}
+
+})   
+
