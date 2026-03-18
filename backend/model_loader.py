@@ -33,16 +33,21 @@ class TrafficPredictor:
         )
 
     def prepare_input(self, payload: dict) -> pd.DataFrame:
-        timestamp = datetime.fromisoformat(payload["timestamp"])
+        timestamp_value = str(payload["timestamp"]).replace("Z", "+00:00")
+        timestamp = datetime.fromisoformat(timestamp_value)
+
+        vehicle_count = int(payload["vehicle_count"])
+        avg_speed_kmh = float(payload["avg_speed_kmh"])
+        signal_time_seconds = int(payload["signal_time_seconds"])
 
         row = {
-            "vehicle_count": payload["vehicle_count"],
-            "avg_speed_kmh": payload["avg_speed_kmh"],
+            "vehicle_count": vehicle_count,
+            "avg_speed_kmh": avg_speed_kmh,
             "intersection_id": self._encode_with_fallback(
                 "intersection_id", payload["intersection_id"]
             ),
             "weather": self._encode_with_fallback("weather", payload["weather"]),
-            "signal_time_seconds": payload["signal_time_seconds"],
+            "signal_time_seconds": signal_time_seconds,
             "hour": timestamp.hour,
             "day_of_week": timestamp.weekday(),
             "is_weekend": 1 if timestamp.weekday() >= 5 else 0,
@@ -58,3 +63,20 @@ class TrafficPredictor:
 
     def decode_congestion(self, label: int) -> str:
         return str(self.encoders["congestion_level"].inverse_transform([label])[0])
+
+    def get_allowed_values(self, column: str) -> list[str]:
+        encoder = self.encoders[column]
+        return [str(item) for item in encoder.classes_]
+
+    def default_value(self, column: str, preferred: str | None = None) -> str:
+        allowed = self.get_allowed_values(column)
+        if not allowed:
+            raise ValueError(f"No allowed values available for {column}")
+
+        if preferred is not None:
+            preferred_lower = preferred.lower()
+            for value in allowed:
+                if value.lower() == preferred_lower:
+                    return value
+
+        return allowed[0]

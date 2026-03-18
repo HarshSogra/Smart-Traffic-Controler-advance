@@ -174,14 +174,15 @@ function renderTrafficDots(liveTraffic) {
 
 
 async function getPrediction(){
-
 const response = await axios.get("/traffic-prediction")
-
-const data = response.data.predictions
-
+const data = response.data.predictions || []
 const map = document.getElementById("predictionMap")
-
 map.innerHTML = ""
+
+if (!data.length) {
+map.innerHTML = `<em>${response.data.message || "No predictions available."}</em>`
+return
+}
 
 const redLightPositions={
 "Red Light A":{x:20,y:30},
@@ -201,16 +202,18 @@ dot.className="traffic-dot"
 
 dot.style.left=pos.x+"%"
 dot.style.top=pos.y+"%"
-
-if(p.prediction>30){
+const normalizedLabel = String(p.prediction_label || "").toLowerCase()
+if(normalizedLabel === "high"){
 dot.style.background="red"
 }
-else if(p.prediction>15){
+else if(normalizedLabel === "medium"){
 dot.style.background="orange"
 }
 else{
 dot.style.background="green"
 }
+
+dot.title = `${p.red_light}: ${p.prediction_label || p.prediction}`
 
 map.appendChild(dot)
 
